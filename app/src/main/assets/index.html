@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+ <meta charset="UTF-8">
+ <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+ <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' https: data:; connect-src 'none'; frame-src 'none'; object-src 'none'; base-uri 'none'">
+ <title>FaceTV News</title>
+ <link rel="stylesheet" href="style.css">
+ <link rel="stylesheet" href="recovered.css">
+ <script src="app.js" defer></script>
+</head>
+<body>
+ <header>
+  <div class="brand"><span>F</span><div><strong>FACE<span>TV</span>NEWS</strong><small>INFORMED. CONNECTED. EMPOWERED.</small></div></div>
+  <button id="refresh" aria-label="Refresh headlines">Refresh</button>
+ </header>
+ <main id="content"><p>Loading your news desk...</p></main>
+ <nav id="nav" aria-label="Main navigation">
+  <button data-view="home" class="active">Home<span>News</span></button>
+  <button data-view="watch">Watch<span>Featured</span></button>
+  <button data-view="topics">Topics<span>Sections</span></button>
+  <button data-view="you">You<span>Saved &amp; tools</span></button>
+  <button data-view="settings">Settings<span>Preferences</span></button>
+ </nav>
+ <div id="notice" role="status" hidden></div>
+</body>
+</html>

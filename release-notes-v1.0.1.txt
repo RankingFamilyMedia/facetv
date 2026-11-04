@@ -1,0 +1,9 @@
+FaceTV News 1.0.1
+
+What's changed
+- Updated the WordPress and custom API connection to use the Cloudflare hostname `akomaconnect.facetvnews.com`.
+- Kept the public website and RSS feed on `facetvnews.com`.
+- Rebuilt and signed the Android release for package `com.mcperry.facetvnews`.
+- Incremented the Android version code from 1 to 2 for release submission.
+
+This release requires network access to the FaceTV News website, publisher feeds and the configured API host.

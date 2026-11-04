@@ -1,0 +1,22 @@
+const fs=require('fs'),vm=require('vm'),assert=require('assert');
+const nodes=new Map(),commands=[];
+function element(key){if(!nodes.has(key))nodes.set(key,{innerHTML:'',textContent:'',hidden:false,classList:{toggle(){}},addEventListener(){}});return nodes.get(key);}
+const document={querySelector:element,querySelectorAll:()=>[],addEventListener(){}};
+const context={document,window:{},FaceNative:{command:value=>commands.push(JSON.parse(value))},localStorage:{getItem:()=>null,setItem(){}},setTimeout:()=>0,console,Date,Math,Map,Set,JSON,URLSearchParams,FormData:function(){}};
+context.window.FaceNative=context.FaceNative;vm.createContext(context);
+vm.runInContext(fs.readFileSync(__dirname+'/../app/src/main/assets/app.js','utf8'),context);
+assert(commands.some(x=>x.action==='news'));assert(commands.some(x=>x.action==='categories'));
+const request=commands.find(x=>x.action==='news').request;
+context.window.onNative({type:'news',data:{request,page:1,more:true,method:'test fixture',posts:[{title:'<script>alert(1)</script>',url:'https://facetvnews.com/one/',publisher:'FaceTVNews',category:'Ghana',excerpt:'A test story',date:'2026-10-05T12:00:00Z'},{title:'Second',url:'https://facetvnews.com/two/',publisher:'FaceTVNews',category:'World',date:'2026-10-05T13:00:00Z'}]}});
+assert(element('#content').innerHTML.includes('&lt;script&gt;'));assert(!element('#content').innerHTML.includes('<script>alert'));
+assert.equal((element('#content').innerHTML.match(/class="lead"/g)||[]).length,1);
+assert.equal((element('#content').innerHTML.match(/class="story"/g)||[]).length,1);
+vm.runInContext("setView('feeds')",context);
+context.window.onNative({type:'feeds',data:{posts:[{title:'External one',url:'https://example.com/one',publisher:'Publisher'},{title:'External two',url:'https://example.com/two',publisher:'Publisher'}],failures:[]}});
+assert.equal((element('#content').innerHTML.match(/class="story"/g)||[]).length,2);
+assert(!element('#content').innerHTML.includes('class="lead"'));
+vm.runInContext("setView('security')",context);assert(element('#content').innerHTML.includes('does not contain an antivirus engine'));
+vm.runInContext("setView('duplicates')",context);
+context.window.onNative({type:'duplicates',data:{groups:[{hash:'abc',files:[{token:'one',name:'photo.jpg',size:123},{token:'two',name:'photo copy.jpg',size:123}]}]}});
+assert.equal((element('#content').innerHTML.match(/name="duplicate"/g)||[]).length,2);
+console.log('UI checks passed: bridge requests, escaping, story layouts, security limits and duplicate controls.');

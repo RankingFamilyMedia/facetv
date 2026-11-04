@@ -1,0 +1,13 @@
+.feature-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:15px}
+.feature-card{display:flex;min-height:96px;flex-direction:column;align-items:flex-start;justify-content:flex-end;padding:16px;border:0;border-radius:14px;background:linear-gradient(135deg,#19202a,#3b4653);color:#fff;text-align:left}
+.feature-card strong{font:700 18px/1.1 Georgia,serif}
+.feature-card small{margin-top:6px;color:#d8dee4;font-size:10px}
+.topic-list{display:grid;gap:10px;margin-top:15px}
+.topic-list button{display:flex;align-items:center;justify-content:space-between;padding:15px 16px;text-align:left}
+.topic-list button span{color:var(--red);font-weight:800}
+.profile-card{display:flex;align-items:center;gap:15px;padding:18px;border-radius:16px;background:var(--ink);color:#fff}
+.profile-card .profile-mark{display:grid;place-items:center;width:48px;height:48px;border-radius:13px;background:var(--red);font-size:28px;font-weight:900}
+.profile-card p{margin:3px 0 0;color:#c5cbd1;font-size:12px}
+.quick-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}
+.quick-actions button{text-align:left}
+@media(min-width:700px){.feature-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.quick-actions{grid-template-columns:repeat(4,minmax(0,1fr))}}

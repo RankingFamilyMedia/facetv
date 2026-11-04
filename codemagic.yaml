@@ -1,0 +1,17 @@
+workflows:
+  android-test:
+    name: FaceTVNews Android test build
+    max_build_duration: 60
+    environment:
+      java: 17
+    scripts:
+      - name: Accept SDK licences and install API 36
+        script: |
+          yes | sdkmanager --licenses > /dev/null || true
+          sdkmanager "platforms;android-36" "build-tools;35.0.0"
+      - name: Build a debug APK
+        script: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleDebug
+    artifacts:
+      - app/build/outputs/apk/debug/*.apk

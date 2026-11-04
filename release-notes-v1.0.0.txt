@@ -1,0 +1,19 @@
+FaceTV News 1.0.0
+
+What's new
+- Rebuilt the FaceTV News experience as one Android app.
+- Browse Home, Watch, Topics and You sections.
+- Explore Ghana, Africa, World, Sports and Entertainment coverage.
+- Read stories in the protected in-app reader and save links for later.
+- Add trusted HTTPS RSS or Atom feeds.
+- Optional headline checks and Android notifications.
+- Device storage, cache, duplicate-file and security tools.
+- Contact FaceTV News directly from the app.
+
+What's fixed
+- Updated the WordPress and custom API connection to use the Cloudflare hostname `akomaconnect.facetvnews.com`.
+- Kept the public website and RSS feed on `facetvnews.com`.
+- Rebuilt and signed the release AAB for package `com.mcperry.facetvnews`.
+- Installed and launched the signed release APK on a physical Android phone for testing.
+
+This is the first rebuilt release. News availability depends on the FaceTV News website, publisher feeds, network access and Android background restrictions.

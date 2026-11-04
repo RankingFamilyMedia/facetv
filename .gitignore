@@ -1,0 +1,15 @@
+.gradle/
+local.properties
+**/build/
+*.jks
+*.keystore
+keystore.properties
+play-signing-credentials.txt
+
+# Local and release artifacts
+.android/
+.gradle-user-home/
+.tmp/
+*.apk
+*.aab
+*.zip
