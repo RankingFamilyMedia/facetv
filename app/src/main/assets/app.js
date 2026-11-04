@@ -1,16 +1,18 @@
 'use strict';
 const $=s=>document.querySelector(s),esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-let view='home',posts=[],external=[],categories=[],page=1,more=false,busy=false,request='',category='',search='',settings={notifications:false,sources:[]},tools=null,groups=[],fingerprint='',scan=false,status='',lookup=new Map();
+let view='home',posts=[],external=[],trending=[],categories=[],page=1,more=false,busy=false,trendingBusy=false,request='',category='',search='',settings={notifications:false,sources:[]},tools=null,groups=[],fingerprint='',scan=false,status='',trendingStatus='',boostReport='',lookup=new Map();
 let saved=[];try{saved=JSON.parse(localStorage.getItem('saved')||'[]');}catch(e){}
 const size=n=>n>=1073741824?(n/1073741824).toFixed(1)+' GB':n>=1048576?(n/1048576).toFixed(1)+' MB':n>=1024?(n/1024).toFixed(1)+' KB':n+' bytes';
 function cmd(action,data={}){if(window.FaceNative)FaceNative.command(JSON.stringify({action,...data}));else toast('This function requires the Android app. Open this project in Android Studio to build it.');}
 function toast(s){$('#notice').textContent=s;$('#notice').hidden=false;setTimeout(()=>$('#notice').hidden=true,6500);}
 function load(reset=true){if(reset){page=1;posts=[];}request=Date.now()+':'+Math.random();busy=true;status='';render();cmd('news',{page,category,search,request});}
+function loadTrending(){trendingBusy=true;trendingStatus='';render();cmd('trending');}
 function byDate(a,b){const x=Date.parse(a.date),y=Date.parse(b.date);return (Number.isFinite(y)?y:0)-(Number.isFinite(x)?x:0);}
 function dateText(s){const d=new Date(s);return Number.isNaN(d.getTime())?'':d.toLocaleDateString(undefined,{month:'short',day:'numeric'});}
-function picture(p,hero=false){return p.image&&/^https:\/\//.test(p.image)?`<img src="${esc(p.image)}" alt="" loading="lazy" class="${hero?'hero-img':'thumb'}">`:`<div class="${hero?'hero-placeholder':'thumb placeholder'}">F<span>FACE TV NEWS</span></div>`;}
+function picture(p,hero=false){return p.image&&/^https:\/\//.test(p.image)?`<img src="${esc(p.image)}" alt="" loading="lazy" class="${hero?'hero-img':'thumb'}">`:`<div class="${hero?'hero-placeholder':'thumb placeholder'}"><img src="facetv-logo.png" alt="FaceTV News logo"></div>`;}
 function story(p,i,hero=false){const id='story-'+lookup.size;lookup.set(id,p);const liked=saved.some(x=>x.url===p.url);return hero?`<article class="lead">${picture(p,true)}<div class="lead-body"><span class="tag">${esc(p.category||'Top story')}</span><h1><button data-open="${id}">${esc(p.title)}</button></h1><p>${esc((p.excerpt||'').slice(0,180))}</p><div class="meta">${esc(p.publisher)} <span>• ${esc(dateText(p.date))}</span><button data-save="${id}">${liked?'♥ Saved':'♡ Save'}</button></div></div></article>`:`<article class="story"><button class="image-button" data-open="${id}" aria-label="Read ${esc(p.title)}">${picture(p)}</button><div><span class="section-label">${esc(p.category||p.publisher)}</span><h2><button data-open="${id}">${esc(p.title)}</button></h2><div class="meta">${esc(p.publisher)} <span>${esc(dateText(p.date))}</span><button data-save="${id}" aria-label="${liked?'Unsave':'Save'} story">${liked?'♥':'♡'}</button></div></div></article>`;}
 function empty(title,text){return `<section class="empty"><span>▤</span><h2>${title}</h2><p>${esc(text)}</p></section>`;}
+function trendStory(p,i){return `<div class="trend-item"><span class="trend-number">${i+1}</span>${story(p,i)}</div>`;}
 function render(){lookup.clear();document.querySelectorAll('nav button').forEach(b=>b.classList.toggle('active',b.dataset.view===view));const c=$('#content');
 if(view==='home'){c.innerHTML=`<div class="edition"><span>GHANA & THE WORLD</span><time>${new Date().toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'})}</time></div><form id="search"><input name="search" type="search" value="${esc(search)}" placeholder="Search FaceTVNews…" aria-label="Search news"><button>Search</button></form><div class="categories"><button data-category="" class="${category===''?'selected':''}">Latest</button>${categories.map(x=>`<button data-category="${x.id}" class="${category===String(x.id)?'selected':''}">${esc(x.name)}</button>`).join('')}</div>${status?`<p class="banner">${esc(status)}</p>`:''}${posts.length?story(posts[0],0,true):busy?'<div class="skeleton">Fetching FaceTVNews headlines…</div>':empty('Your news desk is waiting.','Refresh to try the source again. Network or website restrictions may prevent loading.')}<div class="section-head"><h2>Latest updates</h2><span>${posts.length} loaded</span></div><div class="news-grid">${posts.slice(1).map((p,i)=>story(p,i+1)).join('')}</div>${more?'<button class="primary wide" data-action="more" '+(busy?'disabled':'')+'>'+(busy?'Loading…':'Load more stories')+'</button>':''}<p class="fine">Articles open inside this app on FaceTVNews. Publisher access restrictions still apply.</p>`;return;}
 if(view==='feeds'){c.innerHTML=`<div class="page-intro"><span class="section-label">YOUR WIDER NEWS DESK</span><h1>Latest from other feeds</h1><p>Follow available publisher feeds. Stories open on the publisher’s page inside the app. These are feed updates, not an independently ranked trending index.</p></div>${settings.sources.length?`<div class="sources">${settings.sources.map(s=>`<span>${esc(s.name)}</span>`).join('')}<button data-action="feedRefresh">Refresh</button></div>`:''}<div class="news-grid">${external.length?external.slice().sort(byDate).map((p,i)=>story(p,i)).join(''):empty('Add the sources you trust.','Open Settings to add up to five HTTPS RSS or Atom feeds. No third-party publishers are enabled automatically.')}</div>`;return;}
@@ -25,22 +27,24 @@ case 'news':if(d.request&&d.request!==request)return;busy=false;more=d.more;page
 case 'categories':categories=d.categories;break;
 case 'settings':settings=d;break;
 case 'feeds':external=d.posts;if(d.failures.length)toast(d.failures.join(' · '));break;
-case 'tools':tools=d;break;
+ case 'trending':trendingBusy=false;trending=Array.isArray(d.posts)?d.posts:[];trendingStatus=d.method||'Live feed trend ranking';break;
+ case 'tools':tools=d;break;
 case 'scanning':scan=true;fingerprint='';break;
 case 'scanCancelled':scan=false;break;
 case 'duplicates':scan=false;groups=d.groups;toast(groups.length+' duplicate groups found in the selected scope.');break;
 case 'fingerprint':scan=false;fingerprint=d.hash;break;
 case 'cleaned':toast('Removed '+size(d.bytes)+' of managed app-cache files.');break;
-case 'deleted':groups=[];toast(d.removed+' copies deleted; '+d.failed+' skipped. Estimated file sizes: '+size(d.bytes));break;
-case 'error':if(d.id==='news'){busy=false;status=d.message;}if(d.id==='duplicates'||d.id==='security')scan=false;if(d.id!=='categories')toast(d.message);break;
+ case 'deleted':groups=[];toast(d.removed+' copies deleted; '+d.failed+' skipped. Estimated file sizes: '+size(d.bytes));break;
+ case 'boost':{const s=d.status||{};boostReport='Removed '+size(d.bytes)+' of FaceTV News temporary cache. Free storage: '+size(s.freeStorage)+'. Android memory remains managed by Android.';tools=s;toast('Safe boost complete.');break;}
+ case 'error':if(d.id==='news'){busy=false;status=d.message;}if(d.id==='trending'){trendingBusy=false;trendingStatus=d.message;}if(d.id==='duplicates'||d.id==='security')scan=false;if(d.id!=='categories')toast(d.message);break;
 }render();};
-function setView(v){view=v;render();if(v==='tools')cmd('tools');if(v==='feeds')cmd('feeds');}
+function setView(v){view=v;if(v==='trending'){loadTrending();return;}render();if(v==='tools')cmd('tools');if(v==='feeds')cmd('feeds');}
 window.backHome=()=>view==='home'?cmd('exit'):setView('home');
 document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;if(b.dataset.view)return setView(b.dataset.view);if(b.hasAttribute('data-category')){category=b.dataset.category;return load();}if(b.dataset.open){const p=lookup.get(b.dataset.open);return cmd('open',{url:p.url,title:p.title});}if(b.dataset.save){const p=lookup.get(b.dataset.save),i=saved.findIndex(x=>x.url===p.url);if(i>=0)saved.splice(i,1);else saved.unshift(p);saved=saved.slice(0,500);try{localStorage.setItem('saved',JSON.stringify(saved));}catch(e){toast('Could not save this link. Device storage may be full.');}return render();}if(b.dataset.remove)return cmd('removeSource',{url:b.dataset.remove});if(b.dataset.system)return cmd('system',{which:b.dataset.system});switch(b.dataset.action){case 'more':if(!busy){page++;load(false);}break;case 'feedRefresh':cmd('feeds');toast('Refreshing selected feeds…');break;case 'folder':cmd('chooseFolder');break;case 'file':cmd('chooseFile');break;case 'cancel':cmd('cancel');break;case 'clear':cmd('clear');break;case 'lookup':cmd('lookup');break;case 'toolRefresh':cmd('tools');break;case 'delete':cmd('delete',{tokens:[...document.querySelectorAll('input[name="duplicate"]:checked')].map(x=>x.value)});}}
 );
 document.addEventListener('submit',e=>{e.preventDefault();const data=Object.fromEntries(new FormData(e.target));if(e.target.id==='search'){search=data.search.trim();category='';load();}else if(e.target.id==='source'){cmd('addSource',data);e.target.reset();}});
 document.addEventListener('change',e=>{if(e.target.id==='notification-toggle')cmd('notifications',{enabled:e.target.checked});});
-$('#refresh').addEventListener('click',()=>view==='home'?load():view==='feeds'?cmd('feeds'):cmd('tools'));
+$('#refresh').addEventListener('click',()=>view==='home'?load():view==='feeds'?cmd('feeds'):view==='trending'?loadTrending():cmd('tools'));
 render();cmd('ready');cmd('categories');load();
 
 // Recovered Flutter app structure, implemented in this single native project.
@@ -54,6 +58,17 @@ function recoveredCategory(name){
 render=function(){
  recoveredBaseRender();
  const c=$('#content');
+  if(view==='home')c.innerHTML+='<section class="boost-banner"><div><span class="section-label">PHONE CARE</span><h2>Read more. Worry less.</h2><p>Run a safe boost check while you catch up on the latest FaceTV News.</p></div><button class="primary" data-action="boost">Safe Boost</button></section>';
+  if(view==='trending'){
+   c.innerHTML=`<div class="page-intro"><span class="section-label">FACE TV NEWS DESK</span><h1>What is trending now</h1><p>Discover the stories gaining attention across FaceTV News and the feeds you choose. Curated WordPress trends can be added later without changing the reading experience.</p></div>${trendingStatus&&!trendingBusy?`<p class="banner">${esc(trendingStatus)}</p>`:''}${trending.length?'<div class="trend-list">'+trending.map((p,i)=>trendStory(p,i)).join('')+'</div>':trendingBusy?'<div class="skeleton">Finding the stories people are following...</div>':empty('Trends are loading.','Refresh to rank the latest available stories.')}${trending.length?'<p class="fine">Trend ranking uses freshness, repeated story themes and available publisher feeds. Articles open at their original source.</p>':''}`;
+   return;
+  }
+  if(view==='tools'){
+   const metrics=tools?'<div class="metrics"><div><span>Free storage</span><strong>'+size(tools.freeStorage)+'</strong><small>of '+size(tools.totalStorage)+'</small></div><div><span>Available RAM</span><strong>'+size(tools.freeRam)+'</strong><small>of '+size(tools.totalRam)+'</small></div></div><p class="fine">Android '+esc(tools.android)+' &middot; Security patch '+esc(tools.patch||'unavailable')+'</p>':'<p>Reading device information...</p>';
+   const report=boostReport?'<div class="boost-result"><strong>Safe boost report</strong><p>'+esc(boostReport)+'</p><button data-action="shareBoost">Share report</button></div>':'';
+   c.innerHTML='<div class="page-intro"><span class="section-label">PRACTICAL PHONE CARE</span><h1>Make room for better days</h1><p>Use Android-approved tools to review storage, clear FaceTV News temporary files and find duplicate copies. No forced RAM clearing and no access to other apps.</p></div>'+metrics+'<section class="panel boost-panel"><span class="section-label">ONE-TAP CHECK</span><h2>Safe Boost</h2><p>Clear this app&apos;s temporary cache, refresh your device report and see exactly what changed.</p><button class="primary" data-action="boost">Boost my phone safely</button></section>'+report+'<section class="panel tool"><div><h2>Clear FaceTV News cache</h2><p>'+(tools?size(tools.cache)+' managed cache':'Measure local cache')+' &middot; saved links remain</p></div><button data-action="clear">Review</button></section><section class="panel tool"><div><h2>Find exact duplicates</h2><p>Scan a folder you select and review copies before deletion.</p></div><button data-view="duplicates">Open</button></section><section class="panel tool"><div><h2>File security check</h2><p>Fingerprint a file locally and optionally open its public report.</p></div><button data-view="security">Open</button></section><section class="panel"><h2>Performance settings</h2><p>Android controls memory, battery and other apps. Use its own settings for deeper review.</p><div class="button-row"><button data-system="storage">Storage settings</button><button data-system="battery">Battery settings</button><button data-action="toolRefresh">Refresh report</button></div></section>';
+   return;
+  }
  if(view==='watch'){
   const featured=['Ghana','Africa','World','Sports','Entertainment'];
   c.innerHTML=`<div class="page-intro"><span class="section-label">FACE TV NEWS</span><h1>Watch the stories that matter.</h1><p>Browse the recovered FaceTV News sections and open each story in the protected in-app reader.</p></div><section class="panel"><h2>Featured coverage</h2><div class="feature-grid">${featured.map(name=>`<button class="feature-card" data-topic="${name}"><strong>${name}</strong><small>Open ${name} stories</small></button>`).join('')}</div></section><section class="panel"><h2>More ways to follow</h2><p>Bring the wider news desk into one place while keeping each publisher link attributed.</p><div class="quick-actions"><button data-view="feeds">Publisher feeds</button><button data-view="saved">Saved stories</button></div></section>`;
@@ -77,4 +92,5 @@ document.addEventListener('click',e=>{
  }
  if(b.dataset.contact)cmd('open',{url:b.dataset.contact,title:'FaceTV News contact'});
 });
+document.addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;switch(b.dataset.action){case 'boost':setView('tools');cmd('boost');break;case 'shareBoost':cmd('shareBoost',{text:boostReport});break;}});
 render();

@@ -1,0 +1,12 @@
+FaceTV News 1.0.2
+
+What's changed
+- Added the supplied FaceTV logo to the native splash animation, Android icon, in-app brand header, article placeholders and WebView favicon/touch icon.
+- Added a Safe Boost phone-care action. It clears only FaceTV News temporary cache, refreshes the device report and lets the user share the report.
+- Added the Trending desk. It can consume a curated `facetv/v1/trending` response from the WordPress/API host and falls back to a freshness-and-theme ranking across available feeds.
+- Added a teal brand accent while preserving the existing editorial theme and safe Android permission model.
+- Incremented the Android version code from 2 to 3.
+
+Safety notes
+- The boost action does not kill other apps, clear other apps' private data, inspect the whole phone or promise a RAM increase.
+- Trending stories remain attributed to their original publisher and open through the in-app reader.

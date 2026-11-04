@@ -7,6 +7,8 @@ import org.xmlpull.v1.XmlPullParser;
 import java.io.*;
 import java.net.*;
 import java.nio.charset.StandardCharsets;
+import java.time.*;
+import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 public final class FeedRepository {
@@ -46,6 +48,28 @@ public final class FeedRepository {
   catch(Exception e){if(page>1&&e.getMessage()!=null&&e.getMessage().contains("rest_post_invalid_page_number"))return new JSONObject().put("posts",new JSONArray()).put("page",page).put("more",false).put("method","WordPress API").put("cached",false);if(page>1||!category.isEmpty()||!search.isEmpty())throw e;return new JSONObject().put("posts",rss(cfg.getString("feed"),cfg.getString("name"))).put("page",1).put("more",false).put("method","RSS fallback").put("cached",false);}
  }
  public static JSONArray categories(Context c)throws Exception {JSONObject cfg=config(c);JSONArray raw=new JSONArray(new String(fetch(endpoint(cfg.getString("api"),"/categories?per_page=100&hide_empty=true")),StandardCharsets.UTF_8));JSONArray result=new JSONArray();for(int i=0;i<raw.length();i++){JSONObject r=raw.getJSONObject(i);result.put(new JSONObject().put("id",r.getInt("id")).put("name",plain(r.getString("name"))));}return result;}
+ public static JSONObject trending(Context c,JSONArray sources)throws Exception {
+  JSONObject cfg=config(c);LinkedHashMap<String,JSONObject> unique=new LinkedHashMap<>();
+  String curatedUrl=cfg.optString("trendingApi","").trim();
+  if(!curatedUrl.isEmpty())try{JSONArray curated=curated(c,curatedUrl,cfg.optString("name","FaceTV News"));if(curated.length()>0)return new JSONObject().put("posts",curated).put("method","FaceTVNews curated trends").put("curated",true).put("sourceCount",curated.length());}catch(Exception ignored){}
+  try{JSONArray latest=primary(c,1,"","").getJSONArray("posts");for(int i=0;i<latest.length();i++)addUnique(unique,latest.getJSONObject(i));}catch(Exception ignored){}
+  if(sources!=null)for(int i=0;i<sources.length();i++){JSONObject source=sources.optJSONObject(i);if(source==null)continue;try{JSONArray feed=rss(source.getString("url"),source.optString("name","Publisher feed"));for(int j=0;j<feed.length();j++)addUnique(unique,feed.getJSONObject(j));}catch(Exception ignored){}}
+  if(unique.isEmpty())throw new IOException("No trend stories are available right now.");
+  Map<String,Integer> terms=new HashMap<>();for(JSONObject item:unique.values())addTerms(terms,item.optString("title"));
+  List<JSONObject> ranked=new ArrayList<>(unique.values());for(JSONObject item:ranked){int score=trendScore(item,terms);item.put("trendScore",score);item.put("trendReason",score>=90?"Fresh and widely mentioned":"Fresh from available feeds");}
+  ranked.sort((a,b)->Integer.compare(b.optInt("trendScore"),a.optInt("trendScore")));
+  JSONArray out=new JSONArray();for(int i=0;i<Math.min(12,ranked.size());i++)out.put(ranked.get(i));
+  return new JSONObject().put("posts",out).put("method","Live feed trend ranking").put("curated",false).put("sourceCount",unique.size());
+ }
+ private static JSONArray curated(Context c,String url,String publisher)throws Exception {
+  Object raw=new JSONTokener(new String(fetch(url),StandardCharsets.UTF_8)).nextValue();JSONArray data=raw instanceof JSONArray?(JSONArray)raw:null;
+  if(data==null&&raw instanceof JSONObject){JSONObject object=(JSONObject)raw;data=object.optJSONArray("posts");if(data==null)data=object.optJSONArray("items");}
+  if(data==null)return new JSONArray();JSONArray out=new JSONArray();for(int i=0;i<data.length();i++){JSONObject item=data.optJSONObject(i);if(item==null)continue;JSONObject normalized=item.optJSONObject("title")!=null?post(item,publisher):new JSONObject(item.toString());if(https(normalized.optString("url")))out.put(normalized);}return out;
+ }
+ private static void addUnique(Map<String,JSONObject> items,JSONObject item){String url=item.optString("url");if(https(url)&&!items.containsKey(url))items.put(url,item);}
+ private static void addTerms(Map<String,Integer> terms,String title){for(String token:title.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{Nd}]+"," ").trim().split("\\s+"))if(token.length()>3&&!Arrays.asList("about","after","before","from","have","into","that","their","this","with","your").contains(token))terms.put(token,terms.getOrDefault(token,0)+1);}
+ private static int trendScore(JSONObject item,Map<String,Integer> terms){int score=0;long stamp=when(item.optString("date"));if(stamp>0){long hours=Math.max(0,(System.currentTimeMillis()-stamp)/3600000);score=hours<24?80:hours<72?60:hours<168?35:15;}for(String token:item.optString("title").toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{Nd}]+"," ").trim().split("\\s+"))score+=Math.min(24,terms.getOrDefault(token,0)*4);if("FaceTV News".equalsIgnoreCase(item.optString("publisher")))score+=8;return score;}
+ private static long when(String value){try{return Instant.parse(value).toEpochMilli();}catch(Exception ignored){}try{return ZonedDateTime.parse(value,DateTimeFormatter.RFC_1123_DATE_TIME).toInstant().toEpochMilli();}catch(Exception ignored){return 0;}}
  public static JSONArray rss(String url,String publisher)throws Exception {
   XmlPullParser p=Xml.newPullParser();p.setFeature(XmlPullParser.FEATURE_PROCESS_NAMESPACES,true);byte[] xml=fetch(url);if(new String(xml,StandardCharsets.UTF_8).toUpperCase(Locale.ROOT).contains("<!DOCTYPE"))throw new IOException("DTD is not allowed");p.setInput(new ByteArrayInputStream(xml),null);JSONArray out=new JSONArray();JSONObject current=null;String capture=null;int depth=0,captureDepth=0;StringBuilder val=new StringBuilder();
   for(int event=p.getEventType();event!=XmlPullParser.END_DOCUMENT;event=p.next()){

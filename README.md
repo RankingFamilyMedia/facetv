@@ -8,6 +8,8 @@ The recovered FaceTV News idea is implemented here as one project. The UI now in
 
 ## Included
 
+Current update: version 1.0.2 (code 3). This update adds the FaceTV logo and animated splash, a safe one-tap phone-care boost report, and a Trending desk that can use curated WordPress trends or rank available feeds locally.
+
 - FaceTVNews WordPress API with paginated posts, featured images, categories and search.
 - RSS fallback on the unfiltered first page when the API is unavailable.
 - Cached first-page headlines when both live retrieval routes fail; cached status is clearly labelled.
