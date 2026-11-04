@@ -1,6 +1,7 @@
 :root{--teal:#0b8292;--teal-dark:#075c69;--teal-soft:#e5f4f5;--gold:#d49b35}
+:root{--bg:#f7fbfc;--ink:#14265b;--muted:#657286;--red:#e51b23;--line:#d7e4e8}
 .brand-logo{width:46px;height:46px;object-fit:contain;border-radius:50%;background:#fff;box-shadow:0 4px 14px #075c6920}
-.brand strong span{color:var(--teal)}
+.brand strong span{color:var(--red)}
 .hero-placeholder{background:linear-gradient(135deg,#073d47,#0b8292);padding:28px}
 .hero-placeholder img{width:min(78%,260px);height:auto;max-height:180px;object-fit:contain;border-radius:50%;box-shadow:0 12px 35px #031e2440}
 .placeholder{background:var(--teal-soft);padding:8px}

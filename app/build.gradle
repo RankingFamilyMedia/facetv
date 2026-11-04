@@ -13,12 +13,18 @@ def releaseKeyAlias = System.getenv('FACETV_KEY_ALIAS') ?: releaseProperties['ke
 def releaseKeyPassword = System.getenv('FACETV_KEY_PASSWORD') ?: releaseProperties['keyPassword']
 def releaseKeyConfigured = releaseStoreFile && releaseStorePassword && releaseKeyAlias && releaseKeyPassword
 def configuredApplicationId = project.findProperty('applicationIdOverride') ?: 'com.mcperry.facetvnews'
+def testAdmobAppId = 'ca-app-pub-3940256099942544~3347511713'
+def testBannerAdUnitId = 'ca-app-pub-3940256099942544/9214589741'
+def releaseAdmobAppId = project.findProperty('admobAppId') ?: System.getenv('FACETV_ADMOB_APP_ID') ?: testAdmobAppId
+def releaseBannerAdUnitId = project.findProperty('bannerAdUnitId') ?: System.getenv('FACETV_BANNER_AD_UNIT_ID') ?: testBannerAdUnitId
+def releaseUseTestAds = project.findProperty('adsUseTestIds') ?: 'true'
 
 android {
  namespace 'com.mcperry.facetvnews'
  compileSdk 36
- defaultConfig { applicationId configuredApplicationId; minSdk 26; targetSdk 36; versionCode 3; versionName '1.0.2' }
+ defaultConfig { applicationId configuredApplicationId; minSdk 26; targetSdk 36; versionCode 4; versionName '1.0.3'; manifestPlaceholders = [admobAppId: testAdmobAppId]; buildConfigField 'String', 'BANNER_AD_UNIT_ID', '"' + testBannerAdUnitId + '"' }
  compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
+ buildFeatures { buildConfig true }
  signingConfigs {
   release {
    if (releaseKeyConfigured) {
@@ -32,7 +38,17 @@ android {
  buildTypes {
   release {
    minifyEnabled false
+   manifestPlaceholders = [admobAppId: releaseAdmobAppId]
+   buildConfigField 'String', 'BANNER_AD_UNIT_ID', '"' + releaseBannerAdUnitId + '"'
+   buildConfigField 'boolean', 'ADS_USE_TEST_IDS', releaseUseTestAds
    if (releaseKeyConfigured) signingConfig signingConfigs.release
   }
+  debug {
+   buildConfigField 'boolean', 'ADS_USE_TEST_IDS', 'true'
+  }
  }
+}
+dependencies {
+ implementation 'com.google.android.gms:play-services-ads:25.5.0'
+ implementation 'com.google.android.ump:user-messaging-platform:4.0.0'
 }

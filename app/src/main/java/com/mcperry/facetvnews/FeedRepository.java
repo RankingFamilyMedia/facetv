@@ -10,6 +10,7 @@ import java.nio.charset.StandardCharsets;
 import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+import java.util.regex.*;
 
 public final class FeedRepository {
  public static JSONObject config(Context c) throws Exception { try(InputStream in=c.getAssets().open("sources.json")){return new JSONObject(new String(read(in),StandardCharsets.UTF_8));} }
@@ -37,9 +38,26 @@ public final class FeedRepository {
  public static String plain(String html){return Html.fromHtml(html,Html.FROM_HTML_MODE_LEGACY).toString().trim();}
  public static JSONObject post(JSONObject p,String publisher)throws Exception {
   JSONObject r=new JSONObject();r.put("id",p.optString("id"));r.put("title",plain(p.optJSONObject("title")==null?"Untitled":p.optJSONObject("title").optString("rendered")));r.put("excerpt",plain(p.optJSONObject("excerpt")==null?"":p.optJSONObject("excerpt").optString("rendered")));r.put("url",p.optString("link"));r.put("date",p.optString("date_gmt")+"Z");r.put("publisher",publisher);r.put("image","");r.put("category","News");
-  JSONObject embedded=p.optJSONObject("_embedded");if(embedded!=null){JSONArray media=embedded.optJSONArray("wp:featuredmedia");if(media!=null&&media.length()>0&&media.optJSONObject(0)!=null){String image=media.optJSONObject(0).optString("source_url");if(https(image))r.put("image",image);}
+  String image=wordpressImage(p);if(https(image))r.put("image",image);
+  JSONObject embedded=p.optJSONObject("_embedded");if(embedded!=null){
    JSONArray terms=embedded.optJSONArray("wp:term");if(terms!=null)for(int i=0;i<terms.length();i++){JSONArray group=terms.optJSONArray(i);if(group==null)continue;for(int j=0;j<group.length();j++){JSONObject t=group.optJSONObject(j);if(t!=null&&"category".equals(t.optString("taxonomy"))){r.put("category",t.optString("name","News"));break;}}}
   }return r;
+ }
+ private static String wordpressImage(JSONObject p){
+  JSONObject embedded=p.optJSONObject("_embedded");
+   if(embedded!=null){JSONArray media=embedded.optJSONArray("wp:featuredmedia");if(media!=null&&media.length()>0){String image=mediaImage(media.optJSONObject(0));if(!image.isEmpty())return image;}}
+  String[] keys={"jetpack_featured_media_url","featured_image","featuredImage","thumbnail","image"};
+  for(String key:keys){Object raw=p.opt(key);String image=raw instanceof JSONObject?mediaImage((JSONObject)raw):imageUrl(raw==null?"":String.valueOf(raw));if(!image.isEmpty())return image;}
+  String[] markupKeys={"content","excerpt"};
+  for(String key:markupKeys){JSONObject markup=p.optJSONObject(key);if(markup!=null){String image=imageFromMarkup(markup.optString("rendered"));if(!image.isEmpty())return image;}}
+  return "";
+ }
+ private static String mediaImage(JSONObject item){
+  if(item==null)return "";
+  String[] keys={"source_url","sourceUrl","url","image"};
+  for(String key:keys){String image=imageUrl(item.optString(key,""));if(!image.isEmpty())return image;}
+  JSONObject details=item.optJSONObject("media_details");if(details!=null){JSONObject sizes=details.optJSONObject("sizes");if(sizes!=null){String[] preferred={"large","medium_large","medium","thumbnail"};for(String key:preferred){String image=mediaImage(sizes.optJSONObject(key));if(!image.isEmpty())return image;}}}
+  return "";
  }
  public static JSONObject primary(Context c,int page,String category,String search)throws Exception {
   JSONObject cfg=config(c);String query="/posts?_embed&per_page=20&page="+page;
@@ -76,13 +94,18 @@ public final class FeedRepository {
    if(event==XmlPullParser.DOCDECL)throw new IOException("DTD is not allowed");
    if(event==XmlPullParser.START_TAG){depth++;String name=p.getName();if(name.equals("item")||name.equals("entry")){current=new JSONObject().put("publisher",publisher).put("category","External feed").put("image","");}
     else if(current!=null){if(name.equals("link")&&p.getAttributeValue(null,"href")!=null){String rel=p.getAttributeValue(null,"rel");if(rel==null||rel.equals("alternate"))current.put("url",p.getAttributeValue(null,"href"));}
-     if((name.equals("thumbnail")||name.equals("content")||name.equals("enclosure"))&&p.getAttributeValue(null,"url")!=null){String im=p.getAttributeValue(null,"url");if(https(im)&&("image".equals(p.getAttributeValue(null,"medium"))||name.equals("thumbnail")||p.getAttributeValue(null,"type")!=null&&p.getAttributeValue(null,"type").startsWith("image/")))current.put("image",im);}
-     if(capture==null&&Arrays.asList("title","link","description","summary","pubDate","published","updated","guid","id").contains(name)){capture=name;captureDepth=depth;val.setLength(0);}
+     if(name.equals("img")){setImage(current,attribute(p,"src"));setImage(current,attribute(p,"data-src"));setImage(current,attribute(p,"data-lazy-src"));}
+     if(name.equals("thumbnail")||name.equals("content")||name.equals("enclosure")){String im=attribute(p,"url");if(!imageUrl(im).isEmpty()&&("image".equals(attribute(p,"medium"))||name.equals("thumbnail")||attribute(p,"type").startsWith("image/")))setImage(current,im);}
+     if(capture==null&&Arrays.asList("title","link","description","summary","encoded","pubDate","published","updated","guid","id").contains(name)){capture=name;captureDepth=depth;val.setLength(0);}
     }
-   }else if(event==XmlPullParser.TEXT&&capture!=null)val.append(p.getText());
-   else if(event==XmlPullParser.END_TAG){String name=p.getName();if(current!=null&&capture!=null&&depth==captureDepth){String v=val.toString().trim();switch(capture){case "title":current.put("title",plain(v));break;case "link":if(!v.isEmpty())current.put("url",v);break;case "description":case "summary":current.put("excerpt",plain(v));break;case "guid":case "id":current.put("id",v);break;default:current.put("date",v);}capture=null;}
+   }else if((event==XmlPullParser.TEXT||event==XmlPullParser.CDSECT)&&capture!=null)val.append(p.getText());
+   else if(event==XmlPullParser.END_TAG){String name=p.getName();if(current!=null&&capture!=null&&depth==captureDepth){String v=val.toString().trim();switch(capture){case "title":current.put("title",plain(v));break;case "link":if(!v.isEmpty())current.put("url",v);break;case "description":case "summary":case "encoded":setImage(current,imageFromMarkup(v));current.put("excerpt",plain(v));break;case "guid":case "id":current.put("id",v);break;default:current.put("date",v);}capture=null;}
     if(current!=null&&(name.equals("item")||name.equals("entry"))){if(https(current.optString("url"))){if(current.optString("id").isEmpty())current.put("id",current.optString("url"));out.put(current);}current=null;if(out.length()>=200)break;}depth--;
    }
-  }return out;
+   }return out;
+  }
+ private static String imageUrl(String raw){if(raw==null)return "";String image=raw.trim();if(image.startsWith("https://"))return image;if(image.startsWith("http://"))return "https://"+image.substring(7);return "";}
+ private static void setImage(JSONObject item,String image){String safe=imageUrl(image);if(item!=null&&!safe.isEmpty()&&item.optString("image").isEmpty())try{item.put("image",safe);}catch(JSONException ignored){}}
+ private static String attribute(XmlPullParser p,String wanted){for(int i=0;i<p.getAttributeCount();i++)if(wanted.equalsIgnoreCase(p.getAttributeName(i)))return p.getAttributeValue(i);return "";}
+ private static String imageFromMarkup(String markup){if(markup==null||markup.isEmpty())return "";Matcher m=Pattern.compile("(?i)(?:src|data-src|data-lazy-src)\\s*=\\s*[\\\"'](https?://[^\\\"']+)[\\\"']").matcher(markup);return m.find()?imageUrl(m.group(1)):"";}
  }
-}

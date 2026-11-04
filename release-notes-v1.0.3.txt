@@ -1,0 +1,7 @@
+FaceTV News 1.0.3
+
+- Added emulator-verified native adaptive AdMob banner support.
+- Added production AdMob ID configuration and consent-flow support while keeping development builds on official test IDs.
+- Improved WordPress and RSS featured-image extraction, including embedded media, media sizes, thumbnails, enclosures and image markup.
+- Tuned the interface and native splash colors to the supplied FaceTV navy, red and teal logo.
+- Incremented versionCode to 4 and versionName to 1.0.3.

@@ -8,9 +8,10 @@ The recovered FaceTV News idea is implemented here as one project. The UI now in
 
 ## Included
 
-Current update: version 1.0.2 (code 3). This update adds the FaceTV logo and animated splash, a safe one-tap phone-care boost report, and a Trending desk that can use curated WordPress trends or rank available feeds locally.
+Current update: version 1.0.3 (code 4). This update adds an emulator-verified AdMob test banner, the FaceTV logo and animated splash, a safe one-tap phone-care boost report, improved featured-image extraction, and a Trending desk that can use curated WordPress trends or rank available feeds locally.
 
 - FaceTVNews WordPress API with paginated posts, featured images, categories and search.
+- Native adaptive banner advertising with Google test IDs for development and configurable production IDs for release builds.
 - RSS fallback on the unfiltered first page when the API is unavailable.
 - Cached first-page headlines when both live retrieval routes fail; cached status is clearly labelled.
 - Original article pages inside the app, with a share button. Publisher restrictions, advertisements and paywalls still apply.
@@ -23,7 +24,7 @@ Current update: version 1.0.2 (code 3). This update adds the FaceTV logo and ani
 
 ## Important boundaries
 
-**This is a test release.** It has not been installed or exercised on a physical device or emulator in the build environment. Live FaceTVNews API and RSS checks returned HTTP 502 from that environment; this does not establish that the website is down for your readers. Verify both endpoints from your network and check any WordPress/WAF rules that block the app.
+**This is a preview/test release.** It has been installed and exercised on the `McPerry_Native_Test` Android emulator. The emulator loaded the official AdMob test banner successfully. Live FaceTVNews API and RSS checks returned HTTP 502 from this environment; this does not establish that the website is down for your readers. Verify both endpoints from your network and check any WordPress/WAF rules that block the app.
 
 There is no system-wide cache cleaner, task killer, guaranteed speed booster or full antivirus scanner. Clearing cache can save space but can also cause subsequent downloads. The security tool does not certify that a file or the phone is safe. Unknown VirusTotal fingerprints do not mean clean. To offer a genuine in-app antivirus verdict, integrate and license a security vendor's Android engine or approved analysis backend, along with coverage, update and privacy controls.
 
@@ -85,9 +86,19 @@ Edit `app/src/main/assets/sources.json`:
 }
 ```
 
-The core publisher must expose public posts through the WordPress REST API. This build uses `/?rest_route=/wp/v2` because the current host returns 404 for the pretty `/wp-json/wp/v2` paths; `_embed` supplies featured media and categories. Authentication is not implemented for private posts. Readers can use **Load more** to page through the public archive. RSS fallback only returns items supplied in the feed and cannot guarantee the complete archive, search or category filtering. WordPress category retrieval is capped at 100 categories.
+The core publisher must expose public posts through the WordPress REST API. This build uses `/?rest_route=/wp/v2` because the current host returns 404 for the pretty `/wp-json/wp/v2` paths; `_embed` supplies featured media and categories. The RSS fallback also recognizes media thumbnails, enclosures and image markup. Authentication is not implemented for private posts. Readers can use **Load more** to page through the public archive. RSS fallback only returns items supplied in the feed and cannot guarantee the complete archive, search or category filtering. WordPress category retrieval is capped at 100 categories.
 
 External feeds are added per device in Settings. HTTPS RSS and Atom are supported, with up to five sources and 200 items per feed. These are latest feed items, not a live popularity index. Get any necessary publisher permissions and retain attribution. Full articles open the original source; this app does not republish third-party full text.
+
+## Ads
+
+Debug and default release builds use Google's official test application and banner IDs so emulator testing does not create invalid ad traffic. Before a production release, provide your own AdMob IDs and explicitly disable test mode:
+
+```bat
+gradlew.bat bundleRelease -PadmobAppId=ca-app-pub-your-app-id~your-app-id -PbannerAdUnitId=ca-app-pub-your-banner-id/your-banner-id -PadsUseTestIds=false
+```
+
+The production path includes the User Messaging Platform consent flow. Do not ship Google's test IDs as a monetized production configuration.
 
 ## Notifications
 
