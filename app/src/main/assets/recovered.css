@@ -10,4 +10,6 @@
 .profile-card p{margin:3px 0 0;color:#c5cbd1;font-size:12px}
 .quick-actions{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin-top:15px}
 .quick-actions button{text-align:left}
+.contributor-card{border-color:#a9dfe2;background:linear-gradient(180deg,#fff,#f3fbfb)}.contributor-card h2{color:var(--teal-dark)}.contributor-card p{max-width:620px}
 @media(min-width:700px){.feature-grid{grid-template-columns:repeat(5,minmax(0,1fr))}.quick-actions{grid-template-columns:repeat(4,minmax(0,1fr))}}
+

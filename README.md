@@ -8,10 +8,11 @@ The recovered FaceTV News idea is implemented here as one project. The UI now in
 
 ## Included
 
-Current update: version 1.0.3 (code 4). This update adds an emulator-verified AdMob test banner, the FaceTV logo and animated splash, a safe one-tap phone-care boost report, improved featured-image extraction, and a Trending desk that can use curated WordPress trends or rank available feeds locally.
+Current update: version 1.0.4 (code 5). This update adds moderated community submissions for students, employees and contributors, an app entry point to the WordPress submission page, an emulator-verified AdMob test banner, the FaceTV logo and animated splash, a safe one-tap phone-care boost report, improved featured-image extraction, and a Trending desk that can use curated WordPress trends or rank available feeds locally.
 
 - FaceTVNews WordPress API with paginated posts, featured images, categories and search.
 - Native adaptive banner advertising with Google test IDs for development and configurable production IDs for release builds.
+- Lightweight community contribution entry point; authenticated users submit stories and optional images to the WordPress editorial queue for approval.
 - RSS fallback on the unfiltered first page when the API is unavailable.
 - Cached first-page headlines when both live retrieval routes fail; cached status is clearly labelled.
 - Original article pages inside the app, with a share button. Publisher restrictions, advertisements and paywalls still apply.
@@ -90,6 +91,12 @@ The core publisher must expose public posts through the WordPress REST API. This
 
 External feeds are added per device in Settings. HTTPS RSS and Atom are supported, with up to five sources and 200 items per feed. These are latest feed items, not a live popularity index. Get any necessary publisher permissions and retain attribution. Full articles open the original source; this app does not republish third-party full text.
 
+## Community publishing
+
+The app opens `https://facetvnews.com/contribute/` from the **You** section. Deploy `page-contribute.php` from the local theme source at `C:\Users\PCs\Documents\facetvnews\facetvnews\chromenews\page-contribute.php` to the active ChromeNews theme, then create a WordPress page with slug `contribute` and select **FaceTV Community Submission** as its template. The companion footer change adds a website link when that page exists.
+
+Users must sign in with a WordPress account. Student, employee and community submissions are created as `pending` WordPress posts with an optional featured image; an editor must approve them before they appear on the website or in the app’s published-post feed. See [COMMUNITY-PUBLISHING.md](COMMUNITY-PUBLISHING.md) for the deployment checklist.
+
 ## Ads
 
 Debug and default release builds use Google's official test application and banner IDs so emulator testing does not create invalid ad traffic. Before a production release, provide your own AdMob IDs and explicitly disable test mode:
@@ -151,3 +158,4 @@ node tests/UiChecks.cjs
 - Android process restrictions: https://developer.android.com/about/versions/14/behavior-changes-all
 - AGP 8.11 / API 36 / Gradle 8.13: https://developer.android.com/build/releases/agp-8-11-0-release-notes
 - Play target requirements: https://support.google.com/googleplay/android-developer/answer/11926878
+

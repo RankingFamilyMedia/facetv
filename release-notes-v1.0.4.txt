@@ -1,0 +1,8 @@
+FaceTV News 1.0.4
+
+- Added a lightweight community publishing entry point in the app.
+- Added a moderated WordPress contributor page for authenticated students, employees and community contributors.
+- Added optional featured-image upload support for pending submissions.
+- Kept WordPress as the single source of truth so approved posts appear on the website and existing app feed.
+- Incremented versionCode to 5 and versionName to 1.0.4.
+
